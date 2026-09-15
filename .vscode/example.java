@@ -30,6 +30,8 @@ class main {
                     balance -= bet;
                 }
 
+                System.out.println("You are special! You have a chance to win big! Good luck!");
+
                 System.out.println("Spinning...");
                 row = spinRow();
                 printRow(row);
