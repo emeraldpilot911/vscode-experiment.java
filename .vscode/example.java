@@ -1,7 +1,7 @@
 import java.util.Random;
 import java.util.Scanner;
 
-class main {
+public class example {
     public static void main(String[] args) {
         try (Scanner scanner = new Scanner(System.in)) {
             int balance = 100;
