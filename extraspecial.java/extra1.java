@@ -25,12 +25,10 @@ public class extra1 {
 		}
 
 		printBoard(board);
-		if (winner == 'X') {
-			System.out.println("You win!");
-		} else if (winner == 'O') {
-			System.out.println("Computer wins!");
-		} else {
-			System.out.println("It's a draw!");
+		switch (winner) {
+			case 'X' -> System.out.println("You win!");
+			case 'O' -> System.out.println("Computer wins!");
+			default -> System.out.println("It's a draw!");
 		}
 	}
 
