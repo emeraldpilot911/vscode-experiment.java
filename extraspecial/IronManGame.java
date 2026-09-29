@@ -1,26 +1,26 @@
-import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Random;
+import javax.swing.*;
 
 public class IronManGame extends JPanel implements ActionListener, KeyListener {
 
     // Screen dimensions
-    private static final int WIDTH = 800;
-    private static final int HEIGHT = 600;
+    private static final int GAME_WIDTH = 800;
+    private static final int GAME_HEIGHT = 600;
 
     // Game loop timer
-    private Timer timer;
-    private Random random = new Random();
+    private final Random random = new Random();
 
     // Player (Iron Man) state
     private int playerX = 100;
     private int playerY = 250;
-    private int playerWidth = 60;
-    private int playerHeight = 30;
-    private int playerSpeed = 6;
+    private final int playerWidth = 60;
+    private final int playerHeight = 30;
+    private final int playerSpeed = 6;
     private int powerLevel = 100;
     private int score = 0;
     private boolean gameOver = false;
@@ -33,20 +33,21 @@ public class IronManGame extends JPanel implements ActionListener, KeyListener {
     private boolean shootPressed = false;
     private long lastShotTime = 0;
 
-    // Lists for game objects
-    private ArrayList beams = new ArrayList<>();
-    private ArrayList enemies = new ArrayList<>();
-    private ArrayList particles = new ArrayList<>();
+    // Generic Lists for game objects
+    private final List<Beam> beams = new ArrayList<>();
+    private final List<Enemy> enemies = new ArrayList<>();
+    private final List<Particle> particles = new ArrayList<>();
 
     public IronManGame() {
-        this.setPreferredSize(new Dimension(WIDTH, HEIGHT));
+        this.setPreferredSize(new Dimension(GAME_WIDTH, GAME_HEIGHT));
         this.setBackground(Color.BLACK);
         this.setFocusable(true);
-        this.addKeyListener(this);
+    }
 
-        // 60 FPS Game Loop
-        timer = new Timer(16, this);
-        timer.start();
+    private void startGameLoop() {
+        addKeyListener(this);
+        Timer gameTimer = new Timer(16, this);
+        gameTimer.start();
     }
 
     @Override
@@ -64,9 +65,9 @@ public class IronManGame extends JPanel implements ActionListener, KeyListener {
 
     private void updatePlayer() {
         if (upPressed && playerY > 30) playerY -= playerSpeed;
-        if (downPressed && playerY < HEIGHT - playerHeight - 30) playerY += playerSpeed;
+        if (downPressed && playerY < GAME_HEIGHT - playerHeight - 30) playerY += playerSpeed;
         if (leftPressed && playerX > 20) playerX -= playerSpeed;
-        if (rightPressed && playerX < WIDTH / 2) playerX += playerSpeed;
+        if (rightPressed && playerX < GAME_WIDTH / 2) playerX += playerSpeed;
 
         // Shoot Repulsor Beam (cooldown 200ms)
         if (shootPressed && System.currentTimeMillis() - lastShotTime > 200) {
@@ -76,11 +77,11 @@ public class IronManGame extends JPanel implements ActionListener, KeyListener {
     }
 
     private void updateBeams() {
-        Iterator it = beams.iterator();
+        Iterator<Beam> it = beams.iterator();
         while (it.hasNext()) {
             Beam b = it.next();
             b.x += 12; // Beam speed
-            if (b.x > WIDTH) {
+            if (b.x > GAME_WIDTH) {
                 it.remove();
             }
         }
@@ -89,13 +90,13 @@ public class IronManGame extends JPanel implements ActionListener, KeyListener {
     private void spawnEnemies() {
         // Spawn Hydra Drones periodically
         if (random.nextInt(100) < 3) {
-            int enemyY = random.nextInt(HEIGHT - 100) + 30;
-            enemies.add(new Enemy(WIDTH, enemyY));
+            int enemyY = random.nextInt(GAME_HEIGHT - 100) + 30;
+            enemies.add(new Enemy(GAME_WIDTH, enemyY));
         }
     }
 
     private void updateEnemies() {
-        Iterator it = enemies.iterator();
+        Iterator<Enemy> it = enemies.iterator();
         while (it.hasNext()) {
             Enemy enemy = it.next();
             enemy.x -= enemy.speed;
@@ -106,7 +107,7 @@ public class IronManGame extends JPanel implements ActionListener, KeyListener {
     }
 
     private void updateParticles() {
-        Iterator it = particles.iterator();
+        Iterator<Particle> it = particles.iterator();
         while (it.hasNext()) {
             Particle p = it.next();
             p.update();
@@ -120,32 +121,35 @@ public class IronManGame extends JPanel implements ActionListener, KeyListener {
         Rectangle playerBounds = new Rectangle(playerX, playerY, playerWidth, playerHeight);
 
         // Beam hits Enemy
-        for (Iterator bIt = beams.iterator(); bIt.hasNext(); ) {
-            Beam b = bIt.next();
+        List<Beam> beamsToRemove = new ArrayList<>();
+        List<Enemy> enemiesToRemove = new ArrayList<>();
+
+        for (Beam b : beams) {
             Rectangle beamBounds = new Rectangle(b.x, b.y, b.width, b.height);
+            for (Enemy e : enemies) {
+                if (enemiesToRemove.contains(e)) continue;
 
-            for (Iterator eIt = enemies.iterator(); eIt.hasNext(); ) {
-                Enemy e = eIt.next();
                 Rectangle enemyBounds = new Rectangle(e.x, e.y, e.width, e.height);
-
                 if (beamBounds.intersects(enemyBounds)) {
                     createExplosion(e.x + e.width / 2, e.y + e.height / 2);
-                    bIt.remove();
-                    eIt.remove();
+                    beamsToRemove.add(b);
+                    enemiesToRemove.add(e);
                     score += 100;
                     break;
                 }
             }
         }
 
-        // Enemy hits Iron Man
-        for (Iterator eIt = enemies.iterator(); eIt.hasNext(); ) {
-            Enemy e = eIt.next();
-            Rectangle enemyBounds = new Rectangle(e.x, e.y, e.width, e.height);
+        beams.removeAll(beamsToRemove);
+        enemies.removeAll(enemiesToRemove);
 
+        // Enemy hits Iron Man
+        enemiesToRemove.clear();
+        for (Enemy e : enemies) {
+            Rectangle enemyBounds = new Rectangle(e.x, e.y, e.width, e.height);
             if (playerBounds.intersects(enemyBounds)) {
                 createExplosion(e.x, e.y);
-                eIt.remove();
+                enemiesToRemove.add(e);
                 powerLevel -= 20;
 
                 if (powerLevel <= 0) {
@@ -154,6 +158,7 @@ public class IronManGame extends JPanel implements ActionListener, KeyListener {
                 }
             }
         }
+        enemies.removeAll(enemiesToRemove);
     }
 
     private void createExplosion(int x, int y) {
@@ -170,7 +175,7 @@ public class IronManGame extends JPanel implements ActionListener, KeyListener {
 
         // Draw Background Night Sky / Stars
         g2d.setColor(new Color(10, 15, 30));
-        g2d.fillRect(0, 0, WIDTH, HEIGHT);
+        g2d.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
 
         if (!gameOver) {
             // Draw Iron Man Thruster Particles
@@ -180,7 +185,7 @@ public class IronManGame extends JPanel implements ActionListener, KeyListener {
             g2d.fillRect(playerX - 18, playerY + 12, 8, 6);
 
             // Draw Iron Man Body (Red Armor)
-            g2d.setColor(new Color(180, 0, 0)); // Darker Red
+            g2d.setColor(new Color(180, 0, 0));
             g2d.fillRoundRect(playerX, playerY, playerWidth, playerHeight, 10, 10);
 
             // Draw Gold Accents (Faceplate / Helmet)
@@ -218,12 +223,12 @@ public class IronManGame extends JPanel implements ActionListener, KeyListener {
             // Game Over Screen
             g2d.setColor(Color.RED);
             g2d.setFont(new Font("Arial", Font.BOLD, 48));
-            g2d.drawString("SUIT CRITICAL - GAME OVER", 60, HEIGHT / 2 - 30);
+            g2d.drawString("SUIT CRITICAL - GAME OVER", 60, GAME_HEIGHT / 2 - 30);
 
             g2d.setColor(Color.WHITE);
             g2d.setFont(new Font("Arial", Font.PLAIN, 24));
-            g2d.drawString("Final Score: " + score, WIDTH / 2 - 80, HEIGHT / 2 + 20);
-            g2d.drawString("Press ENTER to Restart", WIDTH / 2 - 130, HEIGHT / 2 + 70);
+            g2d.drawString("Final Score: " + score, GAME_WIDTH / 2 - 80, GAME_HEIGHT / 2 + 20);
+            g2d.drawString("Press ENTER to Restart", GAME_WIDTH / 2 - 130, GAME_HEIGHT / 2 + 70);
         }
     }
 
@@ -242,7 +247,7 @@ public class IronManGame extends JPanel implements ActionListener, KeyListener {
 
         // Draw Score
         g2d.setColor(Color.WHITE);
-        g2d.drawString("SCORE: " + score, WIDTH - 150, 30);
+        g2d.drawString("SCORE: " + score, GAME_WIDTH - 150, 30);
     }
 
     private void restartGame() {
@@ -295,7 +300,7 @@ public class IronManGame extends JPanel implements ActionListener, KeyListener {
     }
 
     private static class Enemy {
-        int x, y, width = 35, height = 25, speed = 5;
+        int x, y, width = 35, height = 25, speed;
 
         Enemy(int x, int y) {
             this.x = x;
@@ -327,14 +332,18 @@ public class IronManGame extends JPanel implements ActionListener, KeyListener {
 
     // Main Method to Launch Game
     public static void main(String[] args) {
-        JFrame frame = new JFrame("Iron Man: JARVIS Defense Protocol");
-        IronManGame gamePanel = new IronManGame();
+        SwingUtilities.invokeLater(() -> {
+            JFrame frame = new JFrame("Iron Man: JARVIS Defense Protocol");
+            IronManGame gamePanel = new IronManGame();
 
-        frame.add(gamePanel);
-        frame.pack();
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setLocationRelativeTo(null);
-        frame.setResizable(false);
-        frame.setVisible(true);
+            frame.add(gamePanel);
+            frame.pack();
+            frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+            frame.setLocationRelativeTo(null);
+            frame.setResizable(false);
+            frame.setVisible(true);
+            gamePanel.startGameLoop();
+            gamePanel.requestFocusInWindow();
+        });
     }
 }
